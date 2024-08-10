@@ -22,7 +22,7 @@ defmodule Elixiryf.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:crawly, "~> 0.17.2"},
+      {:httpoison, "~> 2.0"},
       {:floki, "~> 0.33.0"}
     ]
   end

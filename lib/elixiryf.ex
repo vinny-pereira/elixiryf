@@ -1,6 +1,6 @@
 defmodule Elixiryf do
-  use Crawly.Spider
   alias Elixiryf.Constants, as: Constants
+  alias Elixiryf.Ticker, as: Ticker
   @moduledoc """
   Documentation for `Elixiryf`.
   """
@@ -14,25 +14,34 @@ defmodule Elixiryf do
       :world
 
   """
-  @impl Crawly.Spider
-  def base_url(), do: Constants.base_url()
+  def get_ticker_current_value(ticker_name) do
+    HTTPoison.start()
 
-  def get_ticket_current_price(ticket) do
-    url = "#{base_url()}#{ticket}" 
-    Crawly.Requests.request(url)
-  end
+    headers = [
+      {"User-Agent", Constants.user_agent()},
+    ]
 
-  @impl Crawly.Spider
-  def parse_item(response) do
-    price =
-      response.body
-      |> Floki.parse_document!()
-      |> Floki.find("fin-streamer[data-field='regularMarketPrice']")
-      |> Floki.text()
+    url = "#{Constants.base_url()}#{ticker_name}"
 
-    %{
-      ticket: response.request_url |> String.split("/") |> List.last(),
-      price: price
-    }
+    case HTTPoison.get(url, headers, follow_redirect: true) do
+      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+        IO.puts("Fetched data successfully!")
+        value = body
+                |> Floki.parse_document!()
+                |> Floki.find("fin-streamer[data-field='regularMarketPrice'][data-symbol='#{ticker_name}']")
+                |> Floki.text()
+                |> String.to_float()
+        
+        ticker = %Ticker{name: ticker_name, value: value}
+        inspect(ticker)
+
+      {:ok, %HTTPoison.Response{status_code: status_code}} ->
+        IO.puts("Failed to fetch data. Status code: #{status_code}")
+        :error
+
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        IO.puts("Error occurred: #{reason}")
+        :error
+    end
   end
 end
